@@ -1,0 +1,15 @@
+galaxy_info:
+  author: Valentin Gostev
+  role_name: rabbitmq-cluster
+  description: Ansible Role to deploy RabbitMQ cluster of 3 nodes
+  license: MIT
+  min_ansible_version: 2.4
+  platforms:
+    - name: Ubuntu
+      versions:
+        - bionic
+  galaxy_tags: 
+    - rabbitmq
+    - amqp
+dependencies: []
+  

@@ -1,0 +1,22 @@
+---
+rmq_apt_keyserver: "hkps.pool.sks-keyservers.net"
+rmq_apt_keyid: "0x6B73A36E6026DFCA"
+rmq_apt_system_packages:
+  - apt-transport-https
+rmq_apt_erlang_repo: "deb http://dl.bintray.com/rabbitmq-erlang/debian bionic erlang"
+rmq_apt_erlang_packages: 
+  - erlang-nox
+rmq_apt_rabbitmq_repo: "deb https://dl.bintray.com/rabbitmq/debian bionic main"
+rmq_enable_mgmt_plugin: true
+rmq_path_to_hosts: /etc/hosts
+rmq_repo_priority: "Bintray"
+rmq_apt_package_name: rabbitmq-server
+rmq_service_name: rabbitmq-server
+rmq_path_to_env_file: /etc/rabbitmq/rabbitmq-env.conf
+rmq_admin_url: "http://localhost:15672"
+rmq_path_to_erlang_cookie: /var/lib/rabbitmq/.erlang.cookie
+#rmq_hostgroup_name
+#rmq_hostleader_name
+
+rmq_user_remove_guest: true
+

@@ -1,0 +1,115 @@
+---
+- name: RABBITMQ --- Add /etc/hosts entries
+  lineinfile:
+    dest: "{{ rmq_path_to_hosts }}"
+    regexp: ".*{{ hostvars[item].rmq_name }}"
+    line: "{{ hostvars[item].backnet_ip }} {{ hostvars[item].rmq_name }}"
+    state: present
+  loop: "{{ groups[rmq_hostgroup_name] }}"
+
+- name: RABBITMQ --- Add apt key
+  apt_key:
+    keyserver: "{{ rmq_apt_keyserver }}"
+    id: "{{ rmq_apt_keyid }}"
+    state: present
+
+- name: RABBITMQ --- Install dependencies
+  apt:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ rmq_apt_system_packages }}"
+
+- name: RABBITMQ --- Enable repository for Erlang
+  apt_repository:
+    repo: "{{ rmq_apt_erlang_repo }}"
+    state: present
+    filename: repo-erlang
+
+- name: RABBITMQ --- Prioritize Bintray as source for Erlang
+  copy:
+    dest: /etc/apt/preferences.d/erlang
+    content: |
+      Package: erlang*
+      Pin: release o={{ rmq_repo_priority }}
+      Pin-Priority: 1000
+    owner: root
+    group: root
+    mode: 0644
+
+- name: RABBITMQ --- Install erlang
+  apt:
+    name: "{{ item}}"
+    state: present
+  loop: "{{ rmq_apt_erlang_packages }}"
+
+- name: RABBITMQ --- Install packages
+  apt:
+    name: "{{ rmq_apt_package_name }}"
+    state: present
+
+- name: RABBITMQ --- enable service
+  systemd:
+    name: "{{ rmq_service_name }}"
+    state: started
+    enabled: yes
+
+- name: RABBITMQ --- set node name
+  copy:
+    dest: "{{ rmq_path_to_env_file }}"
+    content: "RABBITMQ_NODENAME=rabbit@{{ rmq_name }}"
+
+- name: RABBITMQ --- restart service
+  systemd:
+    name: "{{ rmq_service_name }}"
+    state: restarted
+    enabled: yes
+
+- name: RABBITMQ --- validate admin UI
+  uri:
+    url: "{{ rmq_admin_url }}"
+    method: GET
+    status_code: 200
+
+- name: RABBITMQ --- Stat erlang cookie
+  stat:
+    path: "{{ rmq_path_to_erlang_cookie }}"
+    register: erlang_cookie
+    delegate_to: "{{ rmq_hostleader_name }}"
+
+- name: RABBITMQ --- read cookie
+  slurp:
+    src: "{{ rmq_path_to_erlang_cookie }}"
+    register: slurp_erlang_file
+  when: erlang_cookie.stat.exists
+  delegate_to: "{{ rmq_hostleader_name }}"
+
+- name: RABBITMQ --- Set fact for cookie
+  set_fact:
+    rabbitmq_erlang_cookie: "{{ slurp_erlang_file['content'] | b64decode }}"
+  when: erlang_cookie.stat.exists
+  delegate_to: "{{ rmq_hostleader_name }}"
+
+# Configure accounts:
+- name: RABBITMQ --- Create admin account
+  rabbitmq_user:
+    user: "{{ rabbitmq_root_user }}"
+    password: "{{ rabbitmq_root_pass }}"
+    tags: administrator
+    vhost: /
+    configure_priv: .*
+    read_priv: .*
+    write_priv: .*
+    state: present
+- name: RABBITMQ --- Remove guest account
+  rabbitmq_user:
+    user: guest
+    state: absent
+- name: RABBITMQ --- Create regular account
+  rabbitmq_user:
+    user: "{{ rabbitmq_site_user }}"
+    password: "{{ rabbitmq_site_pass }}"
+    vhost: /
+    configure_priv: .*
+    read_priv: .*
+    write_priv: .*
+    state: present
